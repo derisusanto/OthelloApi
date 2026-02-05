@@ -1,0 +1,235 @@
+using OthelloAPI.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace OthelloAPI.Services
+{
+    public class GameController
+    {
+        private readonly Board _board;
+        private readonly List<Player> _players;
+        private int _currentPlayerIndex = 0;
+        private int _counterPasses = 0;
+
+        public bool IsGameOver { get; private set; } = false;
+        public Player CurrentPlayer => _players[_currentPlayerIndex];
+
+        // Events untuk UI / API
+        public event Action<Player>? TurnChanged;
+        public event Action<Board>? BoardUpdated;
+        public event Action<Player?>? GameEnded;
+
+        private readonly Position[] directions = new Position[]
+        {
+            new Position(-1,0), new Position(-1,1), new Position(0,1), new Position(1,1),
+            new Position(1,0), new Position(1,-1), new Position(0,-1), new Position(-1,-1)
+        };
+
+        // Constructor
+        public GameController(List<Player> players)
+        {
+            _players = players;
+            _board = new Board(8);       // buat board 8x8
+            InitializeBoardCells();       // inisialisasi semua Cell
+            InitializeBoard();            // taruh 4 piece awal di tengah
+        }
+
+        // ------------------ BOARD INITIALIZATION ------------------
+        private void InitializeBoardCells()
+        {
+            for (int r = 0; r < _board.Size; r++)
+                for (int c = 0; c < _board.Size; c++)
+                    _board.Cells[r, c] = new Cell(new Position(r, c));
+        }
+
+        private void InitializeBoard()
+        {
+            int mid = _board.Size / 2;
+            _board.Cells[mid - 1, mid - 1].Piece = new Piece(PieceColor.White);
+            _board.Cells[mid, mid].Piece = new Piece(PieceColor.White);
+            _board.Cells[mid - 1, mid].Piece = new Piece(PieceColor.Black);
+            _board.Cells[mid, mid - 1].Piece = new Piece(PieceColor.Black);
+
+            RaiseBoardUpdated();
+        }
+
+        public Board GetBoard() => _board;
+
+        private PieceColor ToPieceColor(PlayerColor playerColor)
+            => playerColor == PlayerColor.Black ? PieceColor.Black : PieceColor.White;
+
+        // ------------------ GAMEPLAY ------------------
+        public bool PlayAt(Position pos)
+        {
+            if (IsGameOver) return false;
+            if (!IsValidMove(pos, CurrentPlayer.Color)) return false;
+
+            // Hitung posisi lawan yang akan dibalik
+            var toFlip = GetFlippablePositions(pos, CurrentPlayer.Color);
+
+            // Tempatkan piece
+            _board.Cells[pos.Row, pos.Col].Piece = new Piece(ToPieceColor(CurrentPlayer.Color));
+
+            // Flip lawan
+            FlipPieces(toFlip);
+
+            // Reset counter pass karena ada move valid
+            _counterPasses = 0;
+
+            RaiseBoardUpdated();
+
+            // Ganti turn
+            SwitchTurn();
+
+            // Skip otomatis jika pemain baru tidak punya move
+            if (!HasAnyValidMove(CurrentPlayer.Color))
+            {
+                _counterPasses++;
+                SwitchTurn();
+            }
+
+            // Cek game over
+            if (CheckGameOver())
+            {
+                IsGameOver = true;
+                RaiseGameEnded(GetWinner());
+            }
+
+            return true;
+        }
+
+        public void PassTurn()
+        {
+            _counterPasses++;
+            SwitchTurn();
+
+            if (!HasAnyValidMove(CurrentPlayer.Color))
+            {
+                _counterPasses++;
+                SwitchTurn();
+            }
+
+            if (CheckGameOver())
+            {
+                IsGameOver = true;
+                RaiseGameEnded(GetWinner());
+            }
+        }
+
+        private void FlipPieces(List<Position> positions)
+        {
+            foreach (var p in positions)
+            {
+                var cell = _board.Cells[p.Row, p.Col];
+                if (cell.Piece != null)
+                    cell.Piece.Color = cell.Piece.Color == PieceColor.Black
+                        ? PieceColor.White
+                        : PieceColor.Black;
+            }
+        }
+
+        public bool IsValidMove(Position pos, PlayerColor color)
+        {
+            if (_board.Cells[pos.Row, pos.Col].Piece != null) return false;
+            return GetFlippablePositions(pos, color).Count > 0;
+        }
+
+        private List<Position> GetFlippablePositions(Position pos, PlayerColor color)
+        {
+            var flippable = new List<Position>();
+            var myColor = ToPieceColor(color);
+
+            foreach (var dir in directions)
+            {
+                var temp = new List<Position>();
+                int r = pos.Row + dir.Row;
+                int c = pos.Col + dir.Col;
+
+                while (r >= 0 && r < _board.Size && c >= 0 && c < _board.Size)
+                {
+                    var piece = _board.Cells[r, c].Piece;
+                    if (piece == null || piece.Color == PieceColor.Empty)
+                    {
+                        temp.Clear();
+                        break;
+                    }
+                    else if (piece.Color == myColor)
+                    {
+                        if (temp.Count > 0)
+                            flippable.AddRange(temp);
+                        break;
+                    }
+                    else
+                    {
+                        temp.Add(new Position(r, c));
+                    }
+
+                    r += dir.Row;
+                    c += dir.Col;
+                }
+            }
+
+            return flippable;
+        }
+
+        private void SwitchTurn()
+        {
+            _currentPlayerIndex = (_currentPlayerIndex + 1) % _players.Count;
+            RaiseTurnChanged();
+            RaiseBoardUpdated();
+        }
+
+        private bool HasAnyValidMove(PlayerColor color)
+        {
+            for (int r = 0; r < _board.Size; r++)
+            for (int c = 0; c < _board.Size; c++)
+                if (IsValidMove(new Position(r, c), color))
+                    return true;
+
+            return false;
+        }
+
+        private bool CheckGameOver()
+        {
+            // Board penuh
+            if (_board.Cells.Cast<Cell>().All(c => c.Piece != null))
+                return true;
+
+            // Semua pemain tidak punya move
+            if (!HasAnyValidMove(PlayerColor.Black) && !HasAnyValidMove(PlayerColor.White))
+                return true;
+
+            // Semua pemain pass berturut-turut
+            if (_counterPasses >= _players.Count)
+                return true;
+
+            return false;
+        }
+
+        public (int Black, int White) GetScore()
+        {
+            int black = 0, white = 0;
+            foreach (var cell in _board.Cells)
+            {
+                if (cell.Piece == null) continue;
+                if (cell.Piece.Color == PieceColor.Black) black++;
+                else if (cell.Piece.Color == PieceColor.White) white++;
+            }
+            return (black, white);
+        }
+
+        public Player? GetWinner()
+        {
+            var score = GetScore();
+            if (score.Black > score.White) return _players.First(p => p.Color == PlayerColor.Black);
+            if (score.White > score.Black) return _players.First(p => p.Color == PlayerColor.White);
+            return null; // draw
+        }
+
+        // ------------------ EVENT RAISERS ------------------
+        private void RaiseTurnChanged() => TurnChanged?.Invoke(CurrentPlayer);
+        private void RaiseBoardUpdated() => BoardUpdated?.Invoke(_board);
+        private void RaiseGameEnded(Player? winner) => GameEnded?.Invoke(winner);
+    }
+}
