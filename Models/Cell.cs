@@ -1,6 +1,6 @@
 namespace OthelloAPI.Models;
 
-public class Cell
+public class Cell : ICell
 {
     public Position  Position {get; set;}
 

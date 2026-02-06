@@ -19,7 +19,7 @@ namespace OthelloAPI.Controllers
         {
             if (playerNames.Count != 2) return BadRequest("Harus ada 2 pemain");
 
-            var players = new List<Player>
+            var players = new List<IPlayer>
             {
                 new Player(playerNames[0], PlayerColor.Black),
                 new Player(playerNames[1], PlayerColor.White)
@@ -93,7 +93,7 @@ namespace OthelloAPI.Controllers
         }
 
         // Helper: convert Player ke DTO
-        private PlayerDto ToDto(Player p)
+        private PlayerDto ToDto(IPlayer p)
             => new PlayerDto { Name = p.Name, Color = p.Color.ToString() };
 
         // Helper: buat board jagged untuk JSON

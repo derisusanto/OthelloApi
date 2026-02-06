@@ -15,7 +15,7 @@ namespace OthelloAPI.Models;
 
     public enum Direction
 {
- North,
+        North,
         South,
         East,
         West,

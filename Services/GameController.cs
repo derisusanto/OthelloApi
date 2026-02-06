@@ -8,17 +8,17 @@ namespace OthelloAPI.Services
     public class GameController
     {
         private readonly Board _board;
-        private readonly List<Player> _players;
+        private readonly List<IPlayer> _players;
         private int _currentPlayerIndex = 0;
         private int _counterPasses = 0;
 
         public bool IsGameOver { get; private set; } = false;
-        public Player CurrentPlayer => _players[_currentPlayerIndex];
+        public IPlayer CurrentPlayer => _players[_currentPlayerIndex];
 
         // Events untuk UI / API
-        public event Action<Player>? TurnChanged;
-        public event Action<Board>? BoardUpdated;
-        public event Action<Player?>? GameEnded;
+        public event Action<IPlayer>? TurnChanged;
+        public event Action<IBoard>? BoardUpdated;
+        public event Action<IPlayer?>? GameEnded;
 
         private readonly Position[] directions = new Position[]
         {
@@ -27,7 +27,7 @@ namespace OthelloAPI.Services
         };
 
         // Constructor
-        public GameController(List<Player> players)
+        public GameController(List<IPlayer> players)
         {
             _players = players;
             _board = new Board(8);       // buat board 8x8
@@ -219,7 +219,7 @@ namespace OthelloAPI.Services
             return (black, white);
         }
 
-        public Player? GetWinner()
+        public IPlayer? GetWinner()
         {
             var score = GetScore();
             if (score.Black > score.White) return _players.First(p => p.Color == PlayerColor.Black);
@@ -230,6 +230,6 @@ namespace OthelloAPI.Services
         // ------------------ EVENT RAISERS ------------------
         private void RaiseTurnChanged() => TurnChanged?.Invoke(CurrentPlayer);
         private void RaiseBoardUpdated() => BoardUpdated?.Invoke(_board);
-        private void RaiseGameEnded(Player? winner) => GameEnded?.Invoke(winner);
+        private void RaiseGameEnded(IPlayer? winner) => GameEnded?.Invoke(winner);
     }
 }
