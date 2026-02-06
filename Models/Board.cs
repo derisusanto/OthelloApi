@@ -1,6 +1,7 @@
+
 namespace OthelloAPI.Models;
 
-    public class Board
+    public class Board : IBoard
     {
         public int Size {get; set;}
         public Cell[,] Cells {get; set;}
