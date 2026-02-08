@@ -1,7 +1,6 @@
 using OthelloAPI.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using OthelloAPI.Common;
+using OthelloAPI.DTOs.Response;
 
 namespace OthelloAPI.Services
 {
@@ -60,10 +59,13 @@ namespace OthelloAPI.Services
             => playerColor == PlayerColor.Black ? PieceColor.Black : PieceColor.White;
 
         // ------------------ GAMEPLAY ------------------
-        public bool PlayAt(Position pos)
+        public ServiceResult<bool> PlayAt(Position pos)
         {
-            if (IsGameOver) return false;
-            if (!IsValidMove(pos, CurrentPlayer.Color)) return false;
+            if (IsGameOver)
+                return ServiceResult<bool>.Fail("Game is already over.");
+
+            if (!IsValidMove(pos, CurrentPlayer.Color))
+                return ServiceResult<bool>.Fail("Invalid move at this position.");
 
             // Hitung posisi lawan yang akan dibalik
             var toFlip = GetFlippablePositions(pos, CurrentPlayer.Color);
@@ -77,6 +79,7 @@ namespace OthelloAPI.Services
             // Reset counter pass karena ada move valid
             _counterPasses = 0;
 
+            // Update board
             RaiseBoardUpdated();
 
             // Ganti turn
@@ -96,7 +99,8 @@ namespace OthelloAPI.Services
                 RaiseGameEnded(GetWinner());
             }
 
-            return true;
+            // Move berhasil
+            return ServiceResult<bool>.Ok(true);
         }
 
         public void PassTurn()
@@ -207,24 +211,38 @@ namespace OthelloAPI.Services
             return false;
         }
 
-        public (int Black, int White) GetScore()
+        public ServiceResult<ScoreDto> GetScore()
         {
-            int black = 0, white = 0;
+            if (_board == null || _board.Cells == null)
+                return ServiceResult<ScoreDto>.Fail("Board belum diinisialisasi");
+
+            var score = new ScoreDto();
+
             foreach (var cell in _board.Cells)
             {
                 if (cell.Piece == null) continue;
-                if (cell.Piece.Color == PieceColor.Black) black++;
-                else if (cell.Piece.Color == PieceColor.White) white++;
+
+                if (cell.Piece.Color == PieceColor.Black) score.Black++;
+                else if (cell.Piece.Color == PieceColor.White) score.White++;
             }
-            return (black, white);
+
+            return ServiceResult<ScoreDto>.Ok(score);
         }
 
         public IPlayer? GetWinner()
         {
-            var score = GetScore();
+            var result = GetScore();
+
+            if (!result.Success)
+            {
+
+                return null;
+            }
+
+            var score = result.Data; // inilah ScoreDto
             if (score.Black > score.White) return _players.First(p => p.Color == PlayerColor.Black);
             if (score.White > score.Black) return _players.First(p => p.Color == PlayerColor.White);
-            return null; // draw
+            return null; 
         }
 
         // ------------------ EVENT RAISERS ------------------

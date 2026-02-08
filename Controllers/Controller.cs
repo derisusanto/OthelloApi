@@ -1,142 +1,254 @@
 
-using Microsoft.AspNetCore.Mvc;
-using OthelloAPI.Models;
-using OthelloAPI.Services;
+    using Microsoft.AspNetCore.Mvc;
+    using OthelloAPI.Models;
+    using OthelloAPI.Services;
+    using OthelloAPI.DTOs.Request;
+    using OthelloAPI.DTOs.Response;
 
-namespace OthelloAPI.Controllers
-{
-    [ApiController]
-    [Route("[controller]")]
-    public class OthelloController : ControllerBase
+    namespace OthelloAPI.Controllers
     {
-        private static GameController? _game;
-
-        public class PieceDto { public string Color { get; set; } = "Empty"; }
-        public class PlayerDto { public string Name { get; set; } = ""; public string Color { get; set; } = ""; }
-        
-        [HttpPost("start")]
-        public IActionResult StartGame([FromBody] List<string> playerNames)
+        [ApiController]
+        [Route("[controller]")]
+        public class OthelloController : ControllerBase
         {
-            if (playerNames.Count != 2) return BadRequest("Harus ada 2 pemain");
+            private static GameController? _game;
 
-            var players = new List<IPlayer>
-           
+            // public class PieceDto { public string Color { get; set; } = "Empty"; }
+            // public class PlayerDto { public string Name { get; set; } = ""; public string Color { get; set; } = ""; }
+                        
+            [HttpPost("start")]
+            public IActionResult StartGame([FromBody] StartGameRequestDto request)
             {
-                new Player(playerNames[0], PlayerColor.Black),
-                new Player(playerNames[1], PlayerColor.White)
+                if (string.IsNullOrWhiteSpace(request.Player1) ||
+                    string.IsNullOrWhiteSpace(request.Player2))
+                {
+                    Console.WriteLine($"Player1={request.Player1}, Player2={request.Player2}");
+                    return BadRequest("Nama pemain wajib diisi");
+                }
+
+
+                var players = new List<IPlayer>
+                {
+                    new Player(request.Player1, PlayerColor.Black),
+                    new Player(request.Player2, PlayerColor.White)
+                };
+
+                IBoard board = new Board(8);
+                _game = new GameController(players, board);
+
+                var scoreResult = _game.GetScore();
+
+                var response = new GameStateDto
+                {   
+                    Board = GetBoardJagged(),
+                    Score = scoreResult.Data,
+                    CurrentPlayer = new PlayerDto
+                    {
+                        Name = _game.CurrentPlayer.Name,
+                        Color = _game.CurrentPlayer.Color.ToString()
+                    },
+                     Players = new List<PlayerDto>
+    {
+        new PlayerDto
+        {
+            Name = players[0].Name,
+            Color = players[0].Color.ToString()
+        },
+        new PlayerDto
+        {
+            Name = players[1].Name,
+            Color = players[1].Color.ToString()
+        }
+    },
+                    ValidMoves = GetValidMoves(),
+                    IsGameOver = _game.IsGameOver
+                    
+                };
+
+
+            return Ok(response);
+}
+
+            [HttpGet("board")]
+            public IActionResult GetBoard()
+            {
+                if (_game == null) return BadRequest("Game belum dimulai");
+
+                var board = _game.GetBoard(); // Board selalu bukan null
+                var boardDto = new BoardDto
+                {
+                    Size = board.Size,
+                    Cells = new List<List<CellDto>>()
+                };
+
+                for (int r = 0; r < board.Size; r++)
+                {
+                    var row = new List<CellDto>();
+                    for (int c = 0; c < board.Size; c++)
+                    {
+                        var cell = board.Cells[r, c];
+                        row.Add(new CellDto
+                        {
+                            Position = new PositionDto { Row = cell.Position.Row, Col = cell.Position.Col },
+                            Piece = cell.Piece != null ? new PieceDto { Color = cell.Piece.Color.ToString() } : null
+                        });
+                    }
+                    boardDto.Cells.Add(row);
+                }
+
+                return Ok(boardDto);
+            }
+
+
+            [HttpPost("play")]
+            public IActionResult Play([FromBody] PlayMoveRequestDto request)
+            {
+                if (_game == null) 
+                    return BadRequest("Game belum dimulai");
+
+                var pos = new Position(request.Row, request.Col);
+
+                // Gunakan ServiceResult versi baru
+                var playResult = _game.PlayAt(pos);
+
+                if (!playResult.Success) 
+                    return BadRequest(playResult.Message);
+
+                var scoreResult = _game.GetScore(); // ServiceResult<ScoreDto>
+
+                if (!scoreResult.Success)
+                    return BadRequest(scoreResult.Message);
+
+                var response = new GameStateDto
+                {
+                    Score = scoreResult.Data, // ambil dari Data
+                    CurrentPlayer = new PlayerDto
+                    {
+                        Name = _game.CurrentPlayer.Name,
+                        Color = _game.CurrentPlayer.Color.ToString()
+                    },
+                    ValidMoves = GetValidMoves(),
+                    IsGameOver = _game.IsGameOver
+                };
+
+                return Ok(response);
+            }
+
+
+            [HttpPost("pass")]
+            public IActionResult Pass()
+            {
+                if (_game == null) return BadRequest("Game belum dimulai");
+
+                _game.PassTurn();
+
+        var scoreResult = _game.GetScore(); // ServiceResult<ScoreDto>
+
+                if (!scoreResult.Success)
+                    return BadRequest(scoreResult.Message);
+
+                var response = new GameStateDto
+                {
+                    Score = scoreResult.Data, // ambil dari Data
+                    CurrentPlayer = new PlayerDto
+                    {
+                        Name = _game.CurrentPlayer.Name,
+                        Color = _game.CurrentPlayer.Color.ToString()
+                    },
+                    ValidMoves = GetValidMoves(),
+                    IsGameOver = _game.IsGameOver
+                };
+
+                return Ok(response);
+            }
+
+            [HttpGet("status")]
+            public IActionResult Status()
+            {
+                if (_game == null) return BadRequest("Game belum dimulai");
+
+                  var scoreResult = _game.GetScore();
+
+                var response = new GameStateDto
+                {
+                    Score = scoreResult.Data, // ambil dari Data
+
+                    CurrentPlayer = new PlayerDto
+                    {
+                        Name = _game.CurrentPlayer.Name,
+                        Color = _game.CurrentPlayer.Color.ToString()
+                    },
+                    
+                    ValidMoves = GetValidMoves(),
+                    Board = GetBoardJagged(),
+                    IsGameOver = _game.IsGameOver
+                };
+
+                return Ok(response);
+            }
+
+            // Helper: convert Player ke DTO
+            // private PlayerDto ToDto(IPlayer p)
+            //     => new PlayerDto { Name = p.Name, Color = p.Color.ToString() };
+
+            // Helper: buat board jagged untuk JSON
+        private BoardDto GetBoardJagged()
+        {
+            var board = _game.GetBoard();
+
+            var dto = new BoardDto
+            {
+                Size = board.Size,
+                Cells = new List<List<CellDto>>()
             };
-            IBoard board = new Board(8);
-            _game = new GameController(players, board);
 
-            return Ok(new
-            {
-                message = "Game started",
-                score = new { Black = _game.GetScore().Black, White = _game.GetScore().White },
-                currentPlayer = ToDto(_game.CurrentPlayer),
-                validMoves = GetValidMoves(_game)
-            });
-        }
-
-        [HttpGet("board")]
-        public IActionResult GetBoard()
-        {
-            if (_game == null) return BadRequest("Game belum dimulai");
-            return Ok(GetBoardJagged(_game));
-        }
-
-        [HttpPost("play")]
-        public IActionResult Play([FromBody] Position pos)
-        {
-            if (_game == null) return BadRequest("Game belum dimulai");
-
-            if (!_game.PlayAt(pos)) return BadRequest("Invalid move / Cell sudah terisi");
-
-            return Ok(new
-            {
-                board = GetBoardJagged(_game),
-                currentPlayer = ToDto(_game.CurrentPlayer),
-                score = new { Black = _game.GetScore().Black, White = _game.GetScore().White },
-                validMoves = GetValidMoves(_game),
-                isGameOver = _game.IsGameOver
-            });
-        }
-
-        [HttpPost("pass")]
-        public IActionResult Pass()
-        {
-            if (_game == null) return BadRequest("Game belum dimulai");
-
-            _game.PassTurn();
-
-            return Ok(new
-            {
-                board = GetBoardJagged(_game),
-                currentPlayer = ToDto(_game.CurrentPlayer),
-                score = new { Black = _game.GetScore().Black, White = _game.GetScore().White },
-                validMoves = GetValidMoves(_game),
-                isGameOver = _game.IsGameOver
-            });
-        }
-
-        [HttpGet("status")]
-        public IActionResult Status()
-        {
-            if (_game == null) return BadRequest("Game belum dimulai");
-
-            return Ok(new
-            {
-                board = GetBoardJagged(_game),
-                currentPlayer = ToDto(_game.CurrentPlayer),
-                score = new { Black = _game.GetScore().Black, White = _game.GetScore().White },
-                validMoves = GetValidMoves(_game),
-                isGameOver = _game.IsGameOver
-            });
-        }
-
-        // Helper: convert Player ke DTO
-        private PlayerDto ToDto(IPlayer p)
-            => new PlayerDto { Name = p.Name, Color = p.Color.ToString() };
-
-        // Helper: buat board jagged untuk JSON
-        private object GetBoardJagged(GameController game)
-        {
-            var board = game.GetBoard();
-            var jagged = new object[board.Size][];
             for (int r = 0; r < board.Size; r++)
             {
-                jagged[r] = new object[board.Size];
+                var row = new List<CellDto>();
+
                 for (int c = 0; c < board.Size; c++)
                 {
                     var cell = board.Cells[r, c];
-                    jagged[r][c] = new
+
+                    row.Add(new CellDto
                     {
-                        position = new { Row = cell.Position.Row, Col = cell.Position.Col },
-                        piece = cell.Piece != null
-                            ? new PieceDto { Color = cell.Piece.Color.ToString() }
+                        Position = new PositionDto
+                        {
+                            Row = cell.Position.Row,
+                            Col = cell.Position.Col
+                        },
+                        Piece = cell.Piece != null
+                            ? new PieceDto
+                            {
+                                Color = cell.Piece.Color.ToString()
+                            }
                             : null
-                    };
+                    });
                 }
+
+                dto.Cells.Add(row);
             }
-            return new { Size = board.Size, Cells = jagged };
+
+            return dto;
         }
 
-        // Helper: ambil semua valid moves untuk current player (untuk UI)
-        private List<object> GetValidMoves(GameController game)
-        {
-            var moves = new List<object>();
-            var color = game.CurrentPlayer.Color;
-
-            for (int r = 0; r < game.GetBoard().Size; r++)
+            // Helper: ambil semua valid moves untuk current player (untuk UI)
+            private List<PositionDto> GetValidMoves()
             {
-                for (int c = 0; c < game.GetBoard().Size; c++)
-                {
-                    var pos = new Position(r, c);
-                    if (game.IsValidMove(pos, color))
-                        moves.Add(new { Row = r, Col = c });
-                }
-            }
+                var moves = new List<PositionDto>();
+                var color = _game.CurrentPlayer.Color;
 
-            return moves;
+                for (int r = 0; r < _game.GetBoard().Size; r++)
+                {
+                    for (int c = 0; c < _game.GetBoard().Size; c++)
+                    {
+                        var pos = new Position(r, c);
+                        if (_game.IsValidMove(pos, color))
+                            moves.Add(new PositionDto{ Row = r, Col = c });
+                    }
+                }
+
+                return moves;
+            }
         }
     }
-}
