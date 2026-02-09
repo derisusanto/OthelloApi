@@ -1,20 +1,20 @@
 {
   "format": 1,
   "restore": {
-    "/Users/derisusanto/Documents/OthelloAPI/OthelloAPI/OthelloAPI.csproj": {}
+    "C:\\Users\\Deri\\Documents\\Test\\OthelloApi\\OthelloAPI.csproj": {}
   },
   "projects": {
-    "/Users/derisusanto/Documents/OthelloAPI/OthelloAPI/OthelloAPI.csproj": {
+    "C:\\Users\\Deri\\Documents\\Test\\OthelloApi\\OthelloAPI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/derisusanto/Documents/OthelloAPI/OthelloAPI/OthelloAPI.csproj",
+        "projectUniqueName": "C:\\Users\\Deri\\Documents\\Test\\OthelloApi\\OthelloAPI.csproj",
         "projectName": "OthelloAPI",
-        "projectPath": "/Users/derisusanto/Documents/OthelloAPI/OthelloAPI/OthelloAPI.csproj",
-        "packagesPath": "/Users/derisusanto/.nuget/packages/",
-        "outputPath": "/Users/derisusanto/Documents/OthelloAPI/OthelloAPI/obj/",
+        "projectPath": "C:\\Users\\Deri\\Documents\\Test\\OthelloApi\\OthelloAPI.csproj",
+        "packagesPath": "C:\\Users\\Deri\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Deri\\Documents\\Test\\OthelloApi\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/derisusanto/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Deri\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
@@ -37,7 +37,8 @@
           "enableAudit": "true",
           "auditLevel": "low",
           "auditMode": "direct"
-        }
+        },
+        "SdkAnalysisLevel": "10.0.100"
       },
       "frameworks": {
         "net8.0": {
@@ -63,6 +64,24 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
+          "downloadDependencies": [
+            {
+              "name": "Microsoft.AspNetCore.App.Ref",
+              "version": "[8.0.22, 8.0.22]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Host.win-x64",
+              "version": "[8.0.22, 8.0.22]"
+            },
+            {
+              "name": "Microsoft.NETCore.App.Ref",
+              "version": "[8.0.22, 8.0.22]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[8.0.22, 8.0.22]"
+            }
+          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -71,7 +90,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.416/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.101/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

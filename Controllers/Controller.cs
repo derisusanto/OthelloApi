@@ -75,26 +75,28 @@
                 if (_game == null) return BadRequest("Game belum dimulai");
 
                 var board = _game.GetBoard(); // Board selalu bukan null
-                var boardDto = new BoardDto
-                {
-                    Size = board.Size,
-                    Cells = new List<List<CellDto>>()
-                };
-
-                for (int r = 0; r < board.Size; r++)
-                {
-                    var row = new List<CellDto>();
-                    for (int c = 0; c < board.Size; c++)
-                    {
-                        var cell = board.Cells[r, c];
-                        row.Add(new CellDto
-                        {
-                            Position = new PositionDto { Row = cell.Position.Row, Col = cell.Position.Col },
-                            Piece = cell.Piece != null ? new PieceDto { Color = cell.Piece.Color.ToString() } : null
-                        });
-                    }
-                    boardDto.Cells.Add(row);
-                }
+                // var boardDto = new BoardDto
+                // {
+                //     Size = board.Size,
+                //     Cells = new List<List<CellDto>>()
+                // };
+                
+        
+                // for (int r = 0; r < board.Size; r++)
+                // {
+                //     var row = new List<CellDto>();
+                //     for (int c = 0; c < board.Size; c++)
+                //     {
+                //         var cell = board.Cells[r, c];
+                //         row.Add(new CellDto
+                //         {
+                //             Position = new PositionDto { Row = cell.Position.Row, Col = cell.Position.Col },
+                //             Piece = cell.Piece != null ? new PieceDto { Color = cell.Piece.Color.ToString() } : null
+                //         });
+                //     }
+                //     boardDto.Cells.Add(row);
+                // }
+                var boardDto = GetBoardJagged();
 
                 return Ok(boardDto);
             }
@@ -106,7 +108,7 @@
                 if (_game == null) 
                     return BadRequest("Game belum dimulai");
 
-                var pos = new Position(request.Row, request.Col);
+                Position pos = new Position(request.Row, request.Col);
 
                 // Gunakan ServiceResult versi baru
                 var playResult = _game.PlayAt(pos);
@@ -142,7 +144,7 @@
 
                 _game.PassTurn();
 
-        var scoreResult = _game.GetScore(); // ServiceResult<ScoreDto>
+            var scoreResult = _game.GetScore(); // ServiceResult<ScoreDto>
 
                 if (!scoreResult.Success)
                     return BadRequest(scoreResult.Message);
