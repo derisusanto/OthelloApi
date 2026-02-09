@@ -211,7 +211,7 @@ namespace OthelloAPI.Services
             return false;
         }
 
-        public ServiceResult<ScoreDto> GetScore()
+        public ServiceResult<ScoreDto>  GetScore()
         {
             if (_board == null || _board.Cells == null)
                 return ServiceResult<ScoreDto>.Fail("Board belum diinisialisasi");
