@@ -6,8 +6,9 @@ namespace OthelloAPI.Services
 {
     public class GameController
     {
-        private readonly IBoard _board;
-        private readonly List<IPlayer> _players;
+        private IBoard _board;
+        private List<IPlayer> _players;
+
         private int _currentPlayerIndex = 0;
         private int _counterPasses = 0;
 
@@ -26,15 +27,30 @@ namespace OthelloAPI.Services
         };
 
         // Constructor
-        public GameController(List<IPlayer> players, IBoard board)
+        public GameController()
         {
-            _players = players;
-            _board = board;     // buat board 8x8
-            InitializeBoardCells();       // inisialisasi semua Cell
-            InitializeBoard();            // taruh 4 piece awal di tengah
+            _players = new List<IPlayer>();
+            _board = new Board(8);
         }
 
+
         // ------------------ BOARD INITIALIZATION ------------------
+
+        public void StartNewGame(List<IPlayer> players, IBoard board)
+            {
+                _players = players;
+                _board = board;
+                _currentPlayerIndex = 0;
+                _counterPasses = 0;
+                IsGameOver = false;
+
+                InitializeBoardCells();
+                InitializeBoard();
+
+                RaiseBoardUpdated();
+                RaiseTurnChanged();
+            }
+
         private void InitializeBoardCells()
         {
             for (int r = 0; r < _board.Size; r++)

@@ -11,11 +11,13 @@
         [Route("[controller]")]
         public class OthelloController : ControllerBase
         {
-            private static GameController? _game;
+            private readonly GameController? _game;
 
-            // public class PieceDto { public string Color { get; set; } = "Empty"; }
-            // public class PlayerDto { public string Name { get; set; } = ""; public string Color { get; set; } = ""; }
-                        
+             public OthelloController(GameController game)
+            {
+                _game = game;
+            }
+
             [HttpPost("start")]
             public IActionResult StartGame([FromBody] StartGameRequestDto request)
             {
@@ -34,7 +36,8 @@
                 };
 
                 IBoard board = new Board(8);
-                _game = new GameController(players, board);
+                _game.StartNewGame(players, board);
+
 
                 var scoreResult = _game.GetScore();
 

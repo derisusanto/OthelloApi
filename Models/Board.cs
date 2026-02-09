@@ -7,7 +7,7 @@ namespace OthelloAPI.Models;
         public Cell[,] Cells {get; set;}
         public Board(int size)
     {
-        Size =size;
+        Size = size;
         Cells = new Cell[size,size];
 
         // for(int r=0; r < size; r++)
